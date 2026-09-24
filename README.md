@@ -6,7 +6,7 @@ A small desk clock powered by an ESP8266/ESP-01 and a 128x32 I2C 0.91" OLED Disp
 # Introduction
 For a while I wanted a nice small clock on my desk that would tell me both the date and time.
 
-Now the specific code for this project is only ready-for-use if you (like me) live in the Netherlands (or the same timezone); and don't ever plan on changing your wifi password.
+Now the specific code for this project is only ready-for-use if you (like me) live in the Netherlands (or the same timezone). To use another timezone, change `TIMEZONE_POSIX` in the code.
 For anyone else, consider it a starting point for a project like this. I hope you find it useful.
 
 # Parts list (with links to AliExpress)
@@ -17,6 +17,18 @@ For anyone else, consider it a starting point for a project like this. I hope yo
 * A 3D-printed enclosure (See [Clock case.stl](/Clock%20case.stl) and [Clock case lid.stl](/Clock%20case%20lid.stl))
 * Some wires
 * Some code (See [MiniClock.ino](/MiniClock.ino))
+
+# WiFi setup
+The first time the clock starts (or whenever it can't connect to the saved network, for example after a password change), it opens its own WiFi network called `MiniClock`. The display tells you when that happens.
+
+Connect to it with your phone or laptop and a setup page opens automatically. Pick your WiFi network, enter the password and save. The clock then connects and remembers it.
+
+If nobody sets it up within 5 minutes, the clock restarts and tries the saved network again.
+
+# Libraries
+* [U8g2](https://github.com/olikraus/u8g2)
+* [ezTime](https://github.com/ropg/ezTime)
+* [WiFiManager](https://github.com/tzapu/WiFiManager)
 
 # Assembly
 Please note that on this display, only VCC, NC (GND), SDA and SCL are exposed.
