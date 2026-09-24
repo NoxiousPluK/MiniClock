@@ -3,6 +3,7 @@
 #include <ezTime.h>
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
+#include <ArduinoOTA.h>
 
 /* This code is guaranteed nasty.
  * Written by Jaap-Willem Dooge / DoogeJ / NoxiousPluK
@@ -12,6 +13,11 @@
  * Released under Zlib license:
  * https://github.com/DoogeJ/MiniClock/blob/master/licence.txt
  */
+
+// Name on the network, used for WiFi and for OTA updates (miniclock.local)
+const char *HOSTNAME = "miniclock";
+// Password needed to upload new firmware over WiFi. Change this before flashing!
+const char *OTA_PASSWORD = "Your OTA password";
 
 // Name of the setup network the clock opens when it can't connect to WiFi
 const char *SETUP_AP_NAME = "MiniClock";
@@ -57,6 +63,35 @@ void drawScreen(const char *icon, const String &text, uint8_t shift)
   u8g2.sendBuffer();
 }
 
+void setupOTA()
+{
+  ArduinoOTA.setHostname(HOSTNAME);
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+  ArduinoOTA.onStart([]() {
+    u8g2.setContrast(CONTRAST_DAY);
+    drawMessage("Updating...");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    // Redrawing is slow, so only do it when the percentage changes
+    static unsigned int lastPercent = 101;
+    unsigned int percent = progress * 100 / total;
+    if (percent != lastPercent)
+    {
+      lastPercent = percent;
+      drawMessage("Updating...", (String(percent) + "%").c_str());
+    }
+  });
+  ArduinoOTA.onEnd([]() {
+    drawMessage("Update done,", "restarting...");
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    // The clock carries on and redraws the time on the next second
+    drawMessage("Update failed", ("error " + String(error)).c_str());
+    delay(3000);
+  });
+  ArduinoOTA.begin();
+}
+
 void showSetupInstructions(WiFiManager *wm)
 {
   drawMessage("WiFi setup: connect", ("to '" + wm->getConfigPortalSSID() + "'").c_str());
@@ -71,6 +106,7 @@ void setup()
   // password changed), it opens a setup network with a captive portal where
   // the WiFi network and password can be chosen.
   WiFiManager wifiManager;
+  wifiManager.setHostname(HOSTNAME);
   wifiManager.setAPCallback(showSetupInstructions);
   wifiManager.setConfigPortalTimeout(SETUP_PORTAL_TIMEOUT);
   if (!wifiManager.autoConnect(SETUP_AP_NAME))
@@ -84,10 +120,13 @@ void setup()
     ESP.restart();
   }
   Netherlands.setPosix(TIMEZONE_POSIX);
+
+  setupOTA();
 }
 
 void loop()
 {
+  ArduinoOTA.handle(); // checks for firmware uploads over WiFi
   events(); // lets ezTime periodically re-sync with NTP
 
   if (!secondChanged())
